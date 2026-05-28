@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Capybara Hat Party! ❤️ Angel</title>
+    <script src="/static/canvas-sdk.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a0a2e 0%, #2d1b69 50%, #1a0a2e 100%);
+            color: #f0e6ff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            padding: 24px 16px 8px;
+        }
+
+        header h1 {
+            font-size: 36px;
+            background: linear-gradient(90deg, #ff9a56, #ff6b9d, #c77dff, #72efdd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        header p {
+            font-size: 16px;
+            color: #c4b5fd;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 12px 16px;
+        }
+
+        .toolbar button {
+            background: rgba(191, 0, 255, 0.2);
+            border: 1px solid rgba(191, 0, 255, 0.5);
+            color: #f0e6ff;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toolbar button:hover {
+            background: rgba(191, 0, 255, 0.4);
+            border-color: #c77dff;
+            box-shadow: 0 0 15px rgba(191, 0, 255, 0.3);
+        }
+
+        #gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            padding: 16px 24px 40px;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .capy-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(191, 0, 255, 0.2);
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .capy-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(191, 0, 255, 0.25);
+        }
+
+        .capy-card canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .capy-card .name {
+            text-align: center;
+            padding: 8px;
+            font-size: 14px;
+            color: #c4b5fd;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .capy-card .hat-label {
+            text-align: center;
+            font-size: 11px;
+            color: #72efdd;
+            padding: 0 8px 8px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: rgba(191, 0, 255, 0.9);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            pointer-events: none;
+            transition: transform 0.3s;
+            z-index: 100;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        footer {
+            text-align: center;
+            padding: 16px;
+            font-size: 12px;
+            color: #6b5b95;
+        }
+
+        footer a { color: #c77dff; text-decoration: none; }
+
+        /* Floating particles */
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: float-up linear forwards;
+        }
+
+        @keyframes float-up {
+            0% { opacity: 0.4; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-200px) scale(0); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Capybara Hat Party! ❤️ Angel</h1>
+        <p>Click a capybara to change their hat • Every capybara is one-of-a-kind!</p>
+    </header>
+
+    <div class="toolbar">
+        <button onclick="addCapybara()">+ Add Capybara</button>
+        <button onclick="randomizeAllHats()">✧ New Hats</button>
+        <button onclick="danceParty()">♪ Dance!</button>
+        <button onclick="shareWithAngel()">❤️ Share w/ Angel</button>
+    </div>
+
+    <div id="gallery"></div>
+
+    <div class="toast" id="toast"></div>
+
+    <footer>
+        Made with love for Angel ❤️ &mdash; Powered by <a href="#">Loom Canvas</a>
+    </footer>
+
+    <script>
+    // --- Capybara Drawing Engine ---
+    const hats = [
+        'Top Hat', 'Party Hat', 'Crown', 'Sombrero', 'Beret',
+        'Wizard Hat', 'Cowboy Hat', 'Santa Hat', 'Beanie',
+        'Propeller Cap', 'Viking Helmet', 'Monk Hood',
+        'Fedora', 'Bowler Hat', 'Pirate Hat',
+        'Floral Crown', 'Hard Hat', 'Tophat with Bow',
+        'Turban', 'Beret w/ Paint Smudge', 'Sleeping Cap',
+        'Gladiator Helm', 'Cauliflower Helmet', 'Ice Cream Cone',
+        'Mushroom Cap', 'Leafy Hat', 'Donut Hat'
+    ];
+
+    const capyNames = [
+        'Cappy', 'Bruno', 'Pudding', 'Tofu', 'Mochi',
+        'Biscuit', 'Nugget', 'Waffle', 'Pancake', 'Cookie',
+        'Boba', 'Mochi', 'Peach', 'Bun', 'Yuzu',
+        'Latte', 'Maple', 'Scone', 'Muffin', 'Jelly'
+    ];
+
+    const hatColors = [
+        '#ff6b9d', '#ff9a56', '#72efdd', '#c77dff',
+        '#ffd166', '#06d6a0', '#ef476f', '#118ab2',
+        '#f78fb3', '#a8dadc', '#e9c46a', '#ff758f'
+    ];
+
+    const bodyShades = ['#8B6914', '#9B7924', '#A0844A', '#7B5B1B', '#6B4B12'];
+    const eyeColors = ['#2d1b00', '#3d2b10', '#1a0a00'];
+
+    let capybaras = [];
+    let danceMode = false;
+    let animFrame = null;
+
+    // --- Draw a single capybara on a canvas ---
+    function drawCapybara(canvas, capy) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        const cx = w / 2, cy = h / 2;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Background blob
+        const grad = ctx.createRadialGradient(cx, cy, 20, cx, cy, w * 0.6);
+        grad.addColorStop(0, 'rgba(191, 0, 255, 0.15)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        const scale = w / 220;
+
+        ctx.save();
+        ctx.translate(cx, cy + 10 * scale);
+        ctx.scale(scale, scale);
+
+        // Body (rounded blob)
+        ctx.fillStyle = capy.bodyColor;
+        ctx.beginPath();
+        ctx.ellipse(0, 20, 50, 40, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Head
+        ctx.beginPath();
+        ctx.ellipse(-30, -20, 35, 30, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Snout
+        ctx.fillStyle = shadeColor(capy.bodyColor, -15);
+        ctx.beginPath();
+        ctx.ellipse(-58, -15, 18, 14, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Nose
+        ctx.fillStyle = '#2d1b00';
+        ctx.beginPath();
+        ctx.ellipse(-65, -18, 6, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye
+        ctx.fillStyle = capy.eyeColor;
+        ctx.beginPath();
+        ctx.ellipse(-40, -30, 5, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye shine
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(-38, -32, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ear
+        ctx.fillStyle = shadeColor(capy.bodyColor, -20);
+        ctx.beginPath();
+        ctx.ellipse(-15, -48, 10, 8, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Mouth (small smile)
+        ctx.strokeStyle = '#2d1b00';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(-60, -10, 8, 0.2, Math.PI * 0.8);
+        ctx.stroke();
+
+        // Legs
+        ctx.fillStyle = shadeColor(capy.bodyColor, -10);
+        ctx.beginPath();
+        ctx.ellipse(-20, 55, 12, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(20, 55, 12, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- Draw Hat ---
+        ctx.save();
+        drawHat(ctx, capy.hat, capy.hatColor, -30, -45);
+        ctx.restore();
+
+        ctx.restore();
+    }
+
+    function drawHat(ctx, hatName, color, x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = color;
+        ctx.strokeStyle = shadeColor(color, -30);
+        ctx.lineWidth = 1.5;
+
+        const h = hatName.toLowerCase();
+
+        if (h.includes('top hat') || h.includes('tophet')) {
+            ctx.beginPath();
+            ctx.rect(-15, -35, 30, 38);
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = shadeColor(color, -40);
+            ctx.fillRect(-22, 0, 44, 5);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-18, -8, 36, 4);
+        }
+        else if (h.includes('party')) {
+            ctx.beginPath();
+            ctx.moveTo(0, -40);
+            ctx.lineTo(-18, 5);
+            ctx.lineTo(18, 5);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            // Pom-pom
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, -40, 5, 0, Math.PI * 2);
+            ctx.fill();
+            // Dots
+            ctx.fillStyle = '#ffd166';
+            [-8, 0, 8].forEach(dx => {
+                ctx.beginPath();
+                ctx.arc(dx, -15, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        else if (h.includes('crown')) {
+            ctx.beginPath();
+            ctx.moveTo(-20, 2);
+            ctx.lineTo(-20, -18);
+            ctx.lineTo(-10, -8);
+            ctx.lineTo(0, -25);
+            ctx.lineTo(10, -8);
+            ctx.lineTo(20, -18);
+            ctx.lineTo(20, 2);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            // Gems
+            ctx.fillStyle = '#ef476f';
+            ctx.beginPath(); ctx.arc(0, -14, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#06d6a0';
+            ctx.beginPath(); ctx.arc(-12, -10, 2.5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(12, -10, 2.5, 0, Math.PI * 2); ctx.fill();
+        }
+        else if (h.includes('sombrero')) {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 35, 8, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(-15, -2);
+            ctx.lineTo(-10, -30);
+            ctx.lineTo(10, -30);
+            ctx.lineTo(15, -2);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#ffd166';
+            ctx.fillRect(-12, -12, 24, 3);
+        }
+        else if (h.includes('beret')) {
+            ctx.beginPath();
+            ctx.ellipse(-3, -12, 22, 10, -0.2, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(-3, -15, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        else if (h.includes('wizard')) {
+            ctx.beginPath();
+            ctx.moveTo(-18, 2);
+            ctx.lineTo(-6, -45);
+            ctx.lineTo(6, -40);
+            ctx.lineTo(18, 2);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = shadeColor(color, -30);
+            ctx.fillRect(-22, -1, 44, 5);
+            // Star
+            ctx.fillStyle = '#ffd166';
+            drawStar(ctx, 0, -22, 4, 2, 5);
+        }
+        else if (h.includes('cowboy')) {
+            ctx.beginPath();
+            ctx.moveTo(-18, 0);
+            ctx.quadraticCurveTo(-15, -25, 0, -28);
+            ctx.quadraticCurveTo(15, -25, 18, 0);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillRect(-28, -2, 56, 5);
+            // Band
+            ctx.fillStyle = shadeColor(color, -20);
+            ctx.fillRect(-17, -5, 34, 4);
+        }
+        else if (h.includes('santa')) {
+            ctx.beginPath();
+            ctx.moveTo(-15, 2);
+            ctx.lineTo(-5, -35);
+            ctx.lineTo(8, -35);
+            ctx.lineTo(15, 2);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-18, -2, 36, 6);
+            ctx.beginPath();
+            ctx.arc(8, -35, 8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        else if (h.includes('beanie')) {
+            ctx.beginPath();
+            ctx.ellipse(0, -5, 20, 5, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(-18, -5);
+            ctx.quadraticCurveTo(-15, -30, 0, -32);
+            ctx.quadraticCurveTo(15, -30, 18, -5);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, -32, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        else if (h.includes('propeller')) {
+            ctx.beginPath();
+            ctx.ellipse(0, -2, 18, 6, 0, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+            ctx.fillRect(-3, -25, 6, 24);
+            ctx.save();
+            ctx.rotate(Date.now() / 100);
+            ctx.fillStyle = shadeColor(color, -15);
+            ctx.fillRect(-15, -26, 30, 3);
+            ctx.fillRect(-3, -33, 3, 14);
+            ctx.restore();
+        }
+        else if (h.includes('viking')) {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 22, 10, 0, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = shadeColor(color, -10);
+            // Left horn
+            ctx.beginPath();
+            ctx.moveTo(-14, -5);
+            ctx.quadraticCurveTo(-20, -35, -8, -40);
+            ctx.quadraticCurveTo(-4, -30, -8, -5);
+            ctx.fill(); ctx.stroke();
+            // Right horn
+            ctx.beginPath();
+            ctx.moveTo(14, -5);
+            ctx.quadraticCurveTo(20, -35, 8, -40);
+            ctx.quadraticCurveTo(4, -30, 8, -5);
+            ctx.fill(); ctx.stroke();
+        }
+        else if (h.includes('monk') || h.includes('hood')) {
+            ctx.beginPath();
+            ctx.moveTo(-22, 5);
+            ctx.quadraticCurveTo(-25, -35, 0, -40);
+            ctx.quadraticCurveTo(25, -35, 22, 5);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+        }
+        else if (h.includes('fedora')) {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 24, 6, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(-14, -2);
+            ctx.quadraticCurveTo(-12, -25, 0, -28);
+            ctx.quadraticCurveTo(12, -25, 14, -2);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = shadeColor(color, -25);
+            ctx.fillRect(-16, -8, 32, 4);
+        }
+        else if (h.includes('bowler')) {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 20, 5, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, -5, 18, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+        }
+        else if (h.includes('pirate')) {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 24, 6, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, -5, 19, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+            // Skull
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(0, -12, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.beginPath(); ctx.arc(-2, -13, 1.5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(2, -13, 1.5, 0, Math.PI * 2); ctx.fill();
+        }
+        else if (h.includes('floral')) {
+            const flowers = 7;
+            for (let i = 0; i < flowers; i++) {
+                const a = (Math.PI * 2 / flowers) * i - Math.PI / 2;
+                const fx = Math.cos(a) * 18;
+                const fy = Math.sin(a) * 12 - 5;
+                ctx.fillStyle = i % 2 === 0 ? '#ff6b9d' : '#ffd166';
+                ctx.beginPath();
+                ctx.arc(fx, fy, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#06d6a0';
+                ctx.beginPath();
+                ctx.arc(fx, fy, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.strokeStyle = '#06d6a0';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(0, -5, 20, 8, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        else if (h.includes('hard')) {
+            ctx.beginPath();
+            ctx.ellipse(0, -2, 28, 6, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(-20, -4);
+            ctx.quadraticCurveTo(-18, -28, 0, -30);
+            ctx.quadraticCurveTo(18, -28, 20, -4);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#ffd166';
+            ctx.fillRect(-10, -18, 20, 3);
+        }
+        else if (h.includes('turban')) {
+            ctx.beginPath();
+            ctx.ellipse(0, -10, 22, 16, 0, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#ffd166';
+            ctx.beginPath();
+            ctx.arc(10, -18, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        else if (h.includes('paint')) {
+            ctx.beginPath();
+            ctx.ellipse(-3, -12, 22, 10, -0.2, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+            // Paint smudges
+            ['#ef476f', '#ffd166', '#06d6a0', '#72efdd'].forEach((c, i) => {
+                ctx.fillStyle = c;
+                ctx.beginPath();
+                ctx.arc(-10 + i * 8, -14 + (i % 2) * 4, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        else if (h.includes('sleep')) {
+            ctx.beginPath();
+            ctx.ellipse(0, -8, 20, 14, 0, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(16, -12, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#c4b5fd';
+            ctx.font = '8px serif';
+            ctx.fillText('z', 18, -16);
+        }
+        else if (h.includes('gladiator')) {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 24, 8, 0, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+            ctx.fillRect(-3, -20, 6, 22);
+            ctx.fillStyle = shadeColor(color, -20);
+            ctx.fillRect(-10, -18, 20, 4);
+        }
+        else if (h.includes('cauliflower') || h.includes('helmet')) {
+            for (let i = 0; i < 7; i++) {
+                const a = (Math.PI / 6) * i - Math.PI / 2;
+                const px = Math.cos(a) * 10;
+                const py = Math.sin(a) * 12 - 10;
+                ctx.beginPath();
+                ctx.arc(px, py, 9, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        else if (h.includes('ice cream') || h.includes('cone')) {
+            ctx.fillStyle = '#f7c59f';
+            ctx.beginPath();
+            ctx.moveTo(-10, -5);
+            ctx.lineTo(0, -40);
+            ctx.lineTo(10, -5);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#ffb5e8';
+            ctx.beginPath();
+            ctx.arc(0, -40, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, -44, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        else if (h.includes('mushroom')) {
+            ctx.fillStyle = '#ef476f';
+            ctx.beginPath();
+            ctx.ellipse(0, -8, 28, 18, 0, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(-10, -18, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(10, -16, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, -22, 3.5, 0, Math.PI * 2); ctx.fill();
+        }
+        else if (h.includes('leafy') || h.includes('leaf')) {
+            for (let i = 0; i < 9; i++) {
+                const a = (Math.PI * 2 / 9) * i;
+                ctx.save();
+                ctx.translate(Math.cos(a) * 14, Math.sin(a) * 10 - 8);
+                ctx.rotate(a + Math.PI / 2);
+                ctx.fillStyle = i % 2 === 0 ? '#06d6a0' : '#2d9a7a';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(6, -8, 0, -16);
+                ctx.quadraticCurveTo(-6, -8, 0, 0);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        else if (h.includes('donut') || h.includes('donut')) {
+            ctx.fillStyle = '#f7a072';
+            ctx.beginPath();
+            ctx.ellipse(0, -10, 24, 14, 0, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+            // Frosting
+            ctx.fillStyle = '#ff6b9d';
+            ctx.beginPath();
+            ctx.ellipse(0, -10, 22, 10, 0, Math.PI + 0.3, -0.3);
+            ctx.fill();
+            // Sprinkles
+            ['#ffd166', '#06d6a0', '#72efdd', '#c77dff'].forEach((c, i) => {
+                ctx.fillStyle = c;
+                const sx = -15 + i * 10;
+                const sy = -14 - (i % 2) * 3;
+                ctx.fillRect(sx, sy, 3, 2);
+            });
+        }
+        else {
+            // Default: simple beanie
+            ctx.beginPath();
+            ctx.ellipse(0, -5, 18, 8, 0, Math.PI, 0);
+            ctx.fill(); ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    function drawStar(ctx, cx, cy, outerR, innerR, points) {
+        ctx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+            const r = i % 2 === 0 ? outerR : innerR;
+            const a = (Math.PI / points) * i - Math.PI / 2;
+            const x = cx + Math.cos(a) * r;
+            const y = cy + Math.sin(a) * r;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function shadeColor(hex, percent) {
+        const num = parseInt(hex.slice(1), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+        const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
+        const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+        return `rgb(${R},${G},${B})`;
+    }
+
+    // --- Gallery management ---
+    function createCapybara() {
+        const hat = hats[Math.floor(Math.random() * hats.length)];
+        const name = capyNames[Math.floor(Math.random() * capyNames.length)];
+        return {
+            name,
+            hat,
+            hatColor: hatColors[Math.floor(Math.random() * hatColors.length)],
+            bodyColor: bodyShades[Math.floor(Math.random() * bodyShades.length)],
+            eyeColor: eyeColors[Math.floor(Math.random() * eyeColors.length)],
+        };
+    }
+
+    function renderCard(capy, index) {
+        const card = document.createElement('div');
+        card.className = 'capy-card';
+        card.onclick = () => changeHat(index);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 220;
+        canvas.height = 220;
+        drawCapybara(canvas, capy);
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'name';
+        nameDiv.textContent = capy.name;
+
+        const hatDiv = document.createElement('div');
+        hatDiv.className = 'hat-label';
+        hatDiv.textContent = capy.hat;
+
+        card.appendChild(canvas);
+        card.appendChild(nameDiv);
+        card.appendChild(hatDiv);
+
+        return { card, canvas };
+    }
+
+    function addCapybara() {
+        const capy = createCapybara();
+        capybaras.push(capy);
+        const { card, canvas } = renderCard(capy, capybaras.length - 1);
+        document.getElementById('gallery').appendChild(card);
+        showToast(`${capy.name} joined the party wearing a ${capy.hat}!`);
+    }
+
+    function changeHat(index) {
+        const capy = capybaras[index];
+        let newHat = hats[Math.floor(Math.random() * hats.length)];
+        while (newHat === capy.hat) newHat = hats[Math.floor(Math.random() * hats.length)];
+        capy.hat = newHat;
+        capy.hatColor = hatColors[Math.floor(Math.random() * hatColors.length)];
+
+        const cards = document.querySelectorAll('.capy-card');
+        if (cards[index]) {
+            const canvas = cards[index].querySelector('canvas');
+            drawCapybara(canvas, capy);
+            cards[index].querySelector('.hat-label').textContent = capy.hat;
+            spawnParticles(cards[index]);
+        }
+        showToast(`${capy.name} changed to a ${newHat}!`);
+    }
+
+    function randomizeAllHats() {
+        capybaras.forEach((capy, i) => {
+            capy.hat = hats[Math.floor(Math.random() * hats.length)];
+            capy.hatColor = hatColors[Math.floor(Math.random() * hatColors.length)];
+        });
+        const gallery = document.getElementById('gallery');
+        const cards = gallery.querySelectorAll('.capy-card');
+        capybaras.forEach((capy, i) => {
+            if (cards[i]) {
+                const canvas = cards[i].querySelector('canvas');
+                drawCapybara(canvas, capy);
+                cards[i].querySelector('.hat-label').textContent = capy.hat;
+            }
+        });
+        showToast('All new hats! Party time!');
+    }
+
+    function danceParty() {
+        danceMode = !danceMode;
+        const cards = document.querySelectorAll('.capy-card');
+        if (danceMode) {
+            const interval = setInterval(() => {
+                if (!danceMode) { clearInterval(interval); return; }
+                cards.forEach(card => {
+                    const shift = Math.sin(Date.now() / 100) * 8;
+                    const tilt = Math.sin(Date.now() / 150) * 3;
+                    card.style.transform = `translateY(${shift}px) rotate(${tilt}deg)`;
+                });
+            }, 30);
+            showToast('Let\'s dance! Click again to stop.');
+        }
+    }
+
+    function shareWithAngel() {
+        if (typeof Loom !== 'undefined') {
+            Loom.send('Create a shareable image or message of these capybaras for Angel! Make it extra special and heartfelt.');
+        } else {
+            showToast('Made with love for Angel ❤️');
+        }
+    }
+
+    // --- Particles ---
+    function spawnParticles(el) {
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        for (let i = 0; i < 12; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            const size = 4 + Math.random() * 8;
+            const color = hatColors[Math.floor(Math.random() * hatColors.length)];
+            p.style.cssText = `
+                left: ${cx + (Math.random() - 0.5) * 60}px;
+                top: ${cy + (Math.random() - 0.5) * 60}px;
+                width: ${size}px; height: ${size}px;
+                background: ${color};
+                animation-duration: ${0.8 + Math.random() * 1.2}s;
+            `;
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 2000);
+        }
+    }
+
+    // --- Toast ---
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    // --- Propeller hat animation ---
+    function animatePropellers() {
+        capybaras.forEach((capy, i) => {
+            if (capy.hat.toLowerCase().includes('propeller')) {
+                const cards = document.querySelectorAll('.capy-card');
+                if (cards[i]) {
+                    const canvas = cards[i].querySelector('canvas');
+                    drawCapybara(canvas, capy);
+                }
+            }
+        });
+        requestAnimationFrame(animatePropellers);
+    }
+
+    // --- Init ---
+    function init() {
+        for (let i = 0; i < 8; i++) addCapybara();
+        animatePropellers();
+    }
+
+    init();
+    </script>
+</body>
+</html>
